@@ -1,0 +1,66 @@
+version: '3.3'
+
+services:
+  db1:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: db1
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: mssql@123
+    ports:
+      - "1433:1433"
+
+  db2:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: db2
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: mssql@123
+    ports:
+      - "1434:1434"
+
+  webapps:
+    build:
+      dockerfile: Dockerfile
+      context: ./docker
+    image: onlineapp/dotnet/sdk7:EF
+    container_name: webapps
+    depends_on:
+      - db1
+      - db2
+    ports:
+      - "5135:5135"
+      - "5136:5136"
+    volumes:
+      - .:/app
+    tty: true
+
+  keycloak:
+    build:
+      dockerfile: Dockerfile
+      context: ./docker/keycloak
+    image: onlineapp/keycloak:1.0
+    container_name: keycloak
+    ports:
+      - "8080:8080"
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin123
+
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    restart: always
+    ports:
+      - "8000:8000"
+      - "9443:9443"
+    depends_on:
+      - db1
+      - db2
+      - webapps
+
+volumes:
+  portainer_data:
